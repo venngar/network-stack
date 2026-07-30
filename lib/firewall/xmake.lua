@@ -10,6 +10,7 @@ compartment("Firewall")
     target:add('options', "network-force-non-unique-mac")
     local forceMAC = get_config("network-force-non-unique-mac")
     target:add("defines", "CHERIOT_RTOS_OPTION_FORCE_NON_UNIQUE_MAC=" .. tostring(forceMAC))
+    target:values_set("shared_objects", { mac_addr = 8 }, {expand = false})
   end)
   --FIXME: The FreeRTOS compat headers need to work with this mode!
   --add_defines("CHERIOT_NO_AMBIENT_MALLOC", "CHERIOT_NO_NEW_DELETE")

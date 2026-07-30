@@ -198,7 +198,8 @@ namespace
 		struct FullARPPacket *arpPacket =
 		  reinterpret_cast<struct FullARPPacket *>(packetBuffer);
 
-		memcpy(&arpPacket->ethernet.source, deviceMAC.data(), 6);
+		auto paddedMACAddr = SHARED_OBJECT_WITH_PERMISSIONS(PaddedMACAddress, mac_addr, true, true, false, false, false);
+		memcpy(&arpPacket->ethernet.source, paddedMACAddr->address.data(), 6);
 		memset(&arpPacket->ethernet.destination, 0xff, 6);
 
 		arpPacket->ethernet.etherType = EtherType::ARP;
@@ -207,7 +208,7 @@ namespace
 		arpPacket->arp.hlen           = 0x6 /* size of a MAC address */;
 		arpPacket->arp.plen           = sizeof(uint32_t);
 		arpPacket->arp.oper           = ARPRequest;
-		memcpy(&arpPacket->arp.sha, deviceMAC.data(), 6);
+		memcpy(&arpPacket->arp.sha, paddedMACAddr->address.data(), 6);
 		// This will be zero if our own IP address has not yet been
 		// determined.
 		arpPacket->arp.spa = deviceIP;
@@ -226,13 +227,14 @@ namespace
 
 		// DNS query = length of the hostname + 2 (needed for the
 		// encoding of the hostname) + 2 (qtype) + 2 (qclass)
+		auto paddedMACAddr = SHARED_OBJECT_WITH_PERMISSIONS(PaddedMACAddress, mac_addr, true, true, false, false, false);
 		size_t packetSize = sizeof(FullDNSPacket) + length + 6;
 
 		memset(packetBuffer, 0, packetSize);
 		FullDNSPacket *header = reinterpret_cast<FullDNSPacket *>(packetBuffer);
 
 		// Device (source) MAC.
-		memcpy(&header->ethernet.source, deviceMAC.data(), 6);
+		memcpy(&header->ethernet.source, paddedMACAddr->address.data(), 6);
 		memcpy(&header->ethernet.destination, dnsServerMAC.data(), 6);
 		// Only support IPv4 for now.
 		header->ethernet.etherType = EtherType::IPv4;
@@ -905,8 +907,9 @@ namespace
  */
 __cheri_compartment("DNS") void initialize_dns_resolver(uint8_t *macAddress)
 {
+	auto paddedMACAddr = SHARED_OBJECT_WITH_PERMISSIONS(PaddedMACAddress, mac_addr, true, true, true, false, false);
 	Debug::log("Initializing the DNS resolver.");
-	memcpy(deviceMAC.data(), macAddress, 6);
+	memcpy(paddedMACAddr->address.data(), macAddress, 6);
 	state |= ResolverState::DeviceMACSet;
 	state.notify_all(); // probably unnecessary but does no harm
 }

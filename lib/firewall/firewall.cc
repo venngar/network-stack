@@ -463,37 +463,44 @@ namespace
 	 */
 	MACAddress &mac_address()
 	{
-		static MACAddress macAddress = []() {
-			auto &ethernet = lazy_network_interface();
-			if constexpr (EthernetDevice::has_unique_mac_address() ||
-			              CHERIOT_RTOS_OPTION_FORCE_NON_UNIQUE_MAC)
-			{
-				return ethernet.mac_address_default();
-			}
-			else
-			{
-				std::array<uint8_t, 6> macAddress;
-				EntropySource          entropy;
-				for (auto &byte : macAddress)
+		auto paddedMACAddr = SHARED_OBJECT_WITH_PERMISSIONS(PaddedMACAddress, mac_addr, true, true, false, false, false);
+		// static MACAddress macAddress = []() {
+		if (paddedMACAddr->address[0] == 0x00 && paddedMACAddr->address[1] == 0x00 && paddedMACAddr->address[2] == 0x00 &&
+			paddedMACAddr->address[3] == 0x00 && paddedMACAddr->address[4] == 0x00 && paddedMACAddr->address[5] == 0x00)
+		{
+			paddedMACAddr->address = []() {
+				auto &ethernet = lazy_network_interface();
+				if constexpr (EthernetDevice::has_unique_mac_address() ||
+							CHERIOT_RTOS_OPTION_FORCE_NON_UNIQUE_MAC)
 				{
-					byte = entropy();
+					return ethernet.mac_address_default();
 				}
-				// Set the local bit (second bit transmitted from first byte) to
-				// 1 to indicate a locally administered MAC
-				macAddress[0] |= 0b10;
-				// Make sure that the broadcast bit is 0
-				macAddress[0] &= ~0b1;
-				Debug::log("MAC address: {}:{}:{}:{}:{}:{}",
-				           macAddress[0],
-				           macAddress[1],
-				           macAddress[2],
-				           macAddress[3],
-				           macAddress[4],
-				           macAddress[5]);
-				return macAddress;
-			}
-		}();
-		return macAddress;
+				else
+				{
+					std::array<uint8_t, 6> macAddress;
+					EntropySource          entropy;
+					for (auto &byte : macAddress)
+					{
+						byte = entropy();
+					}
+					// Set the local bit (second bit transmitted from first byte) to
+					// 1 to indicate a locally administered MAC
+					macAddress[0] |= 0b10;
+					// Make sure that the broadcast bit is 0
+					macAddress[0] &= ~0b1;
+					Debug::log("MAC address: {}:{}:{}:{}:{}:{}",
+							macAddress[0],
+							macAddress[1],
+							macAddress[2],
+							macAddress[3],
+							macAddress[4],
+							macAddress[5]);
+					return macAddress;
+				}
+			}();
+		}
+		return paddedMACAddr->address;
+		// return macAddress;
 	}
 
 	static_assert(sizeof(EthernetHeader) == 14);
@@ -921,7 +928,8 @@ namespace
 		}
 		EthernetHeader *ethernetHeader =
 		  reinterpret_cast<EthernetHeader *>(const_cast<uint8_t *>(data));
-		if ((ethernetHeader->destination != mac_address()) &&
+		auto paddedMACAddr = SHARED_OBJECT_WITH_PERMISSIONS(PaddedMACAddress, mac_addr, true, false, false, false, false);
+		if ((ethernetHeader->destination != paddedMACAddr->address) &&
 		    (ethernetHeader->destination != broadcastMAC))
 		{
 			Debug::log(
@@ -1272,8 +1280,19 @@ bool ethernet_driver_start(std::atomic<uint8_t> *state)
 
 uint8_t *firewall_mac_address_get()
 {
-	CHERI::Capability ret{mac_address().data()};
-	ret.permissions() &= {CHERI::Permission::Load, CHERI::Permission::Global};
-	Debug::Assert(ret.bounds() == 6, "Invalid MAC address bounds");
-	return ret;
+	// CHERI::Capability ret{mac_address().data()};
+	// ret.permissions() &= {CHERI::Permission::Load, CHERI::Permission::Global};
+	// Debug::Assert(ret.bounds() == 6, "Invalid MAC address bounds");
+	// return ret;
+	auto paddedMACAddr = SHARED_OBJECT_WITH_PERMISSIONS(PaddedMACAddress, mac_addr, true, false, false, false, false);
+	return paddedMACAddr->address.data();
+}
+
+void firewall_mac_address_set()
+{
+	// CHERI::Capability ret{mac_address().data()};
+	// ret.permissions() &= {CHERI::Permission::Load, CHERI::Permission::Global};
+	// Debug::Assert(ret.bounds() == 6, "Invalid MAC address bounds");
+	// return ret;
+	mac_address();
 }

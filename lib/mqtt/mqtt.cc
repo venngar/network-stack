@@ -1103,7 +1103,7 @@ int mqtt_run(Timeout *t, MQTTConnection mqttHandle)
 					  return -EAGAIN;
 				  }
 			  }
-		  } while (t->remaining > 0 && status != MQTTSuccess);
+		  } while (t->remaining > 0);
 
 		  if (status != MQTTSuccess)
 		  {

@@ -364,3 +364,5 @@ firewall_remove_tcpipv6_server_port(uint16_t localPort)
  * Returns a read-only capability to the MAC address.
  */
 uint8_t *__cheri_compartment("Firewall") firewall_mac_address_get();
+
+void __cheri_compartment("Firewall") firewall_mac_address_set();

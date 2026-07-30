@@ -41,6 +41,15 @@ const char *ethertype_as_string(EtherType etherType)
 using MACAddress = std::array<uint8_t, 6>;
 
 /**
+ * Padded MAC address
+*/
+struct PaddedMACAddress
+{
+	MACAddress address;
+	uint8_t padding[2];
+};
+
+/**
  * Ethernet header.
  */
 struct EthernetHeader

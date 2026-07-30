@@ -88,6 +88,7 @@ void __cheri_compartment("TCPIP") network_start()
 	Debug::log("Output function: {}",
 	           reinterpret_cast<void *>(interface.pfOutput));
 	Debug::log("Setting up endpointIPv4");
+	firewall_mac_address_set();
 	auto *mac = firewall_mac_address_get();
 	FreeRTOS_FillEndPoint(&interface,
 	                      &endpointIPv4,
